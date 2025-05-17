@@ -176,18 +176,41 @@ async def generate_app_code(generation_id: str, app_description: str, model: str
     generation_dir = GENERATED_CODE_DIR / generation_id
     generation_dir.mkdir(exist_ok=True)
     
+    # Helper function to update generation status
+    async def update_status(update_dict, push_dict=None):
+        # Update in-memory storage
+        app.state.generation_statuses = getattr(app.state, 'generation_statuses', {})
+        if generation_id in app.state.generation_statuses:
+            status_dict = app.state.generation_statuses[generation_id]
+            status_dict.update(update_dict)
+            
+            # Handle logs appending
+            if push_dict and 'logs' in push_dict:
+                if 'logs' not in status_dict:
+                    status_dict['logs'] = []
+                status_dict['logs'].extend(push_dict['logs'])
+        
+        # Update in MongoDB if available
+        if db is not None:
+            try:
+                # Prepare update operation
+                update_ops = {"$set": update_dict}
+                if push_dict:
+                    update_ops["$push"] = push_dict
+                
+                await db.generation_status.update_one(
+                    {"id": generation_id},
+                    update_ops
+                )
+            except Exception as e:
+                logging.error(f"Failed to update generation status in MongoDB: {str(e)}")
+    
     try:
         # Update status to in_progress
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {"$set": {"status": "in_progress"}}
-        )
+        await update_status({"status": "in_progress"})
         
         # Add log entry
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {"$push": {"logs": "Starting code generation..."}}
-        )
+        await update_status({}, {"logs": ["Starting code generation..."]})
         
         # Prepare prompt for the AI
         prompt = f"""
@@ -211,10 +234,7 @@ async def generate_app_code(generation_id: str, app_description: str, model: str
         """
         
         # Add log entry
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {"$push": {"logs": f"Sending request to AI model: {model}..."}}
-        )
+        await update_status({}, {"logs": [f"Sending request to AI model: {model}..."]})
         
         # Call appropriate AI API based on model selection
         if model.startswith("gpt"):
@@ -225,10 +245,7 @@ async def generate_app_code(generation_id: str, app_description: str, model: str
             raise ValueError(f"Unsupported model: {model}")
         
         # Add log entry
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {"$push": {"logs": "AI response received. Parsing generated code..."}}
-        )
+        await update_status({}, {"logs": ["AI response received. Parsing generated code..."]})
         
         # Parse the response to extract code files
         files = parse_code_files(response_text)
@@ -237,10 +254,7 @@ async def generate_app_code(generation_id: str, app_description: str, model: str
             raise Exception("No valid code files found in the AI response")
         
         # Add log entry
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {"$push": {"logs": f"Found {len(files)} files in AI response. Creating file structure..."}}
-        )
+        await update_status({}, {"logs": [f"Found {len(files)} files in AI response. Creating file structure..."]})
         
         # Write files to disk
         for file_info in files:
@@ -255,10 +269,7 @@ async def generate_app_code(generation_id: str, app_description: str, model: str
                 f.write(content)
             
             # Add log entry
-            await db.generation_status.update_one(
-                {"id": generation_id},
-                {"$push": {"logs": f"Created file: {filename}"}}
-            )
+            await update_status({}, {"logs": [f"Created file: {filename}"]})
         
         # Create a zip file of the generated code
         zip_path = str(GENERATED_CODE_DIR / f"{generation_id}.zip")
@@ -270,36 +281,22 @@ async def generate_app_code(generation_id: str, app_description: str, model: str
                     zipf.write(file_path, arcname)
         
         # Add log entry
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {"$push": {"logs": "Created ZIP archive of generated code."}}
-        )
+        await update_status({}, {"logs": ["Created ZIP archive of generated code."]})
         
         # Update status to completed
         zip_url = f"/api/download/{generation_id}"
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {
-                "$set": {
-                    "status": "completed",
-                    "zipUrl": zip_url
-                }
-            }
-        )
+        await update_status({
+            "status": "completed",
+            "zipUrl": zip_url
+        })
         
     except Exception as e:
         logging.error(f"Error in generate_app_code: {str(e)}")
         # Update status to failed
-        await db.generation_status.update_one(
-            {"id": generation_id},
-            {
-                "$set": {
-                    "status": "failed",
-                    "error": str(e)
-                },
-                "$push": {"logs": f"Error: {str(e)}"}
-            }
-        )
+        await update_status({
+            "status": "failed",
+            "error": str(e)
+        }, {"logs": [f"Error: {str(e)}"]})
         
         # Clean up
         if generation_dir.exists():
