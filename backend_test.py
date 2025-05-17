@@ -130,8 +130,8 @@ class AppCreationBotTester:
             }
         )
         
-        if success and response and "generation_id" in response:
-            generation_id = response["generation_id"]
+        if success and response and "generationId" in response:
+            generation_id = response["generationId"]
             print(f"Generation ID: {generation_id}")
             return generation_id
         return None
