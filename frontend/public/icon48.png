@@ -1,0 +1,11 @@
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="64" fill="#5B21B6"/>
+  
+  <!-- T-shirt -->
+  <path d="M64,25 L90,38 L100,50 L85,45 L85,100 L43,100 L43,45 L28,50 L38,38 Z" fill="white"/>
+  
+  <!-- Person -->
+  <circle cx="64" cy="40" r="12" fill="#F59E0B"/>
+  <path d="M52,52 C52,52 52,80 64,80 C76,80 76,52 76,52 Z" fill="#F59E0B"/>
+</svg>
