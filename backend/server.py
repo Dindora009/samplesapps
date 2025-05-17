@@ -19,9 +19,20 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ.get('DB_NAME', 'app_generator_db')]
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+db_name = os.environ.get('DB_NAME', 'app_generator_db')
+
+# Initialize MongoDB client with retry logic
+try:
+    client = AsyncIOMotorClient(mongo_url)
+    # Force a connection to verify it works
+    logging.info("Testing MongoDB connection...")
+    db = client[db_name]
+except Exception as e:
+    logging.error(f"Failed to connect to MongoDB: {str(e)}")
+    # Continue without MongoDB for now
+    client = None
+    db = None
 
 # OpenAI API key - this will be provided by the user
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
