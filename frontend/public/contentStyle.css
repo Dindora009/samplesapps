@@ -1,0 +1,30 @@
+.virtual-try-on-container {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 9999;
+}
+
+.virtual-try-on-button {
+  background-color: #5B21B6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.virtual-try-on-button:hover {
+  background-color: #7C3AED;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.virtual-try-on-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}

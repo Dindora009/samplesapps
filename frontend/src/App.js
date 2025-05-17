@@ -6,16 +6,21 @@ import "./App.css";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import TryOnPage from "./pages/TryOnPage";
+import ChromeExtension from "./ChromeExtension";
 
 function App() {
+  // Detect if we're running as a Chrome extension
+  const isExtension = !!window.chrome && !!chrome.runtime && !!chrome.runtime.id;
+
   return (
     <div className="App">
       <BrowserRouter>
-        <Navbar />
+        {!isExtension && <Navbar />}
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/app" element={<TryOnPage />} />
         </Routes>
+        <ChromeExtension />
       </BrowserRouter>
       <ToastContainer 
         position="bottom-right"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import ImageUploader from '../components/ImageUploader';
@@ -9,7 +9,7 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const TryOnPage = () => {
+const TryOnPage = ({ initialClothingImage = null }) => {
   // State for image uploads
   const [personImage, setPersonImage] = useState(null);
   const [clothingImage, setClothingImage] = useState(null);
@@ -19,6 +19,14 @@ const TryOnPage = () => {
   
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Load initial clothing image if provided (from Chrome extension)
+  useEffect(() => {
+    if (initialClothingImage) {
+      setClothingImage(initialClothingImage);
+      toast.info('Clothing image loaded from the store');
+    }
+  }, [initialClothingImage]);
 
   // Handle person image upload
   const handlePersonImageUpload = (base64String, fileName) => {
@@ -72,9 +80,12 @@ const TryOnPage = () => {
     exit: { opacity: 0 }
   };
 
+  // Detect if we're running as a Chrome extension
+  const isExtension = !!window.chrome && !!chrome.runtime && !!chrome.runtime.id;
+
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-b from-background to-background-light text-white py-10 px-4 sm:px-6 lg:px-8"
+      className={`min-h-screen bg-gradient-to-b from-background to-background-light text-white py-10 px-4 sm:px-6 lg:px-8 ${isExtension ? 'extension-mode' : ''}`}
       initial="initial"
       animate="animate"
       exit="exit"
