@@ -125,7 +125,7 @@ class AppCreationBotTester:
             "generate-app",
             200,
             data={
-                "description": "Create a simple todo app with user authentication",
+                "appDescription": "Create a simple todo app with user authentication",
                 "model": model
             }
         )
