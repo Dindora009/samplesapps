@@ -314,6 +314,9 @@ async def generate_app(request: AppGenerationRequest, background_tasks: Backgrou
     elif request.model.startswith("claude") and not ANTHROPIC_API_KEY:
         raise HTTPException(status_code=400, detail="Anthropic API key not configured")
     
+    if not request.appDescription.strip():
+        raise HTTPException(status_code=400, detail="App description cannot be empty")
+    
     # Generate a unique ID for this generation
     generation_id = str(uuid.uuid4())
     
@@ -325,7 +328,16 @@ async def generate_app(request: AppGenerationRequest, background_tasks: Backgrou
         model=request.model
     )
     
-    await db.generation_status.insert_one(status.dict())
+    # Store status in memory if MongoDB is not available
+    app.state.generation_statuses = getattr(app.state, 'generation_statuses', {})
+    app.state.generation_statuses[generation_id] = status.dict()
+    
+    # Try to store in MongoDB if available
+    if db is not None:
+        try:
+            await db.generation_status.insert_one(status.dict())
+        except Exception as e:
+            logging.error(f"Failed to store generation status in MongoDB: {str(e)}")
     
     # Start the generation in the background
     background_tasks.add_task(
@@ -339,7 +351,20 @@ async def generate_app(request: AppGenerationRequest, background_tasks: Backgrou
 
 @api_router.get("/generation-status/{generation_id}")
 async def get_generation_status(generation_id: str):
-    status = await db.generation_status.find_one({"id": generation_id})
+    status = None
+    
+    # Try to get from MongoDB first if available
+    if db is not None:
+        try:
+            status = await db.generation_status.find_one({"id": generation_id})
+        except Exception as e:
+            logging.error(f"Failed to retrieve generation status from MongoDB: {str(e)}")
+    
+    # Fall back to in-memory storage
+    if status is None:
+        app.state.generation_statuses = getattr(app.state, 'generation_statuses', {})
+        status = app.state.generation_statuses.get(generation_id)
+    
     if not status:
         raise HTTPException(status_code=404, detail="Generation ID not found")
     
