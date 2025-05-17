@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
@@ -13,6 +13,10 @@ const Home = () => {
   const [zipUrl, setZipUrl] = useState(null);
   const [model, setModel] = useState("gpt-4");
   const [logs, setLogs] = useState([]);
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [openaiKey, setOpenaiKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [apiConfigured, setApiConfigured] = useState(false);
 
   const models = [
     { value: "gpt-4", label: "OpenAI GPT-4" },
@@ -22,11 +26,61 @@ const Home = () => {
     { value: "claude-3-sonnet", label: "Anthropic Claude 3 Sonnet" }
   ];
 
+  // Check if API is configured on load
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const response = await axios.get(`${API}/`);
+        if (response.data && response.data.message === "Hello World") {
+          setApiConfigured(true);
+        }
+      } catch (e) {
+        console.error("Error checking API status:", e);
+      }
+    };
+    
+    checkApiStatus();
+  }, []);
+
+  const saveApiKeys = async (e) => {
+    e.preventDefault();
+    
+    const keys = {};
+    if (openaiKey) keys.openai = openaiKey;
+    if (anthropicKey) keys.anthropic = anthropicKey;
+    
+    if (!keys.openai && !keys.anthropic) {
+      setError("Please provide at least one API key");
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/setup-api-keys`, keys);
+      setApiConfigured(true);
+      setShowApiConfig(false);
+      setError(null);
+    } catch (error) {
+      setError("Failed to save API keys. Please try again.");
+      console.error(error);
+    }
+  };
+
   const generateApp = async (e) => {
     e.preventDefault();
     
     if (!appDescription.trim()) {
       setError("Please enter an app description");
+      return;
+    }
+    
+    // Check if the appropriate API key is configured based on model selection
+    if (model.startsWith("gpt") && !openaiKey && !apiConfigured) {
+      setError("Please configure your OpenAI API key first");
+      setShowApiConfig(true);
+      return;
+    } else if (model.startsWith("claude") && !anthropicKey && !apiConfigured) {
+      setError("Please configure your Anthropic API key first");
+      setShowApiConfig(true);
       return;
     }
     
@@ -70,7 +124,7 @@ const Home = () => {
       
     } catch (error) {
       setIsLoading(false);
-      setError(error.response?.data?.message || "Error generating app. Please try again.");
+      setError(error.response?.data?.detail || "Error generating app. Please try again.");
       console.error(error);
     }
   };
@@ -83,6 +137,71 @@ const Home = () => {
           Describe your app in natural language, and I'll generate the code for you.
         </p>
       </div>
+
+      {!apiConfigured && !showApiConfig && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8 rounded-md">
+          <p className="font-bold">API Configuration Required</p>
+          <p>You need to configure at least one API key to use this service.</p>
+          <button
+            onClick={() => setShowApiConfig(true)}
+            className="mt-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded"
+          >
+            Configure API Keys
+          </button>
+        </div>
+      )}
+
+      {showApiConfig && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">API Configuration</h2>
+          <form onSubmit={saveApiKeys} className="space-y-4">
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="openaiKey">
+                OpenAI API Key (for GPT models)
+              </label>
+              <input
+                type="password"
+                id="openaiKey"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={openaiKey}
+                onChange={(e) => setOpenaiKey(e.target.value)}
+                placeholder="sk-..."
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="anthropicKey">
+                Anthropic API Key (for Claude models)
+              </label>
+              <input
+                type="password"
+                id="anthropicKey"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={anthropicKey}
+                onChange={(e) => setAnthropicKey(e.target.value)}
+                placeholder="sk-ant-..."
+              />
+            </div>
+            
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Save API Keys
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setShowApiConfig(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <form onSubmit={generateApp} className="space-y-6">
@@ -122,11 +241,11 @@ const Home = () => {
             <button
               type="submit"
               className={`px-6 py-3 rounded-md text-white font-medium ${
-                isLoading
+                isLoading || (!apiConfigured && !showApiConfig)
                   ? "bg-gray-500 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
               }`}
-              disabled={isLoading}
+              disabled={isLoading || (!apiConfigured && !showApiConfig)}
             >
               {isLoading ? "Generating App..." : "Generate App"}
             </button>
