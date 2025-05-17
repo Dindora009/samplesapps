@@ -53,7 +53,7 @@ class GenerationStatus(BaseModel):
     error: Optional[str] = None
     appDescription: str
     model: str
-    timestamp: float = Field(default_factory=lambda: import time; return time.time())
+    timestamp: float = Field(default_factory=lambda: __import__('time').time())
 
 # Function to call OpenAI API
 async def call_openai_api(prompt, model="gpt-4"):
