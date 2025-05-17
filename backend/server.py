@@ -396,6 +396,10 @@ async def download_zip(generation_id: str):
         media_type="application/zip"
     )
 
+@api_router.get("/")
+async def root():
+    return {"message": "Hello World", "status": "API is operational"}
+
 @api_router.post("/setup-api-keys")
 async def setup_api_keys(api_keys: Dict[str, str]):
     global OPENAI_API_KEY, ANTHROPIC_API_KEY
