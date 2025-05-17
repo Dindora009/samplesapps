@@ -369,8 +369,21 @@ async def get_generation_status(generation_id: str):
 
 @api_router.get("/download/{generation_id}")
 async def download_zip(generation_id: str):
-    status = await db.generation_status.find_one({"id": generation_id})
-    if not status or status["status"] != "completed":
+    status = None
+    
+    # Try to get from MongoDB first if available
+    if db is not None:
+        try:
+            status = await db.generation_status.find_one({"id": generation_id})
+        except Exception as e:
+            logging.error(f"Failed to retrieve generation status from MongoDB: {str(e)}")
+    
+    # Fall back to in-memory storage
+    if status is None:
+        app.state.generation_statuses = getattr(app.state, 'generation_statuses', {})
+        status = app.state.generation_statuses.get(generation_id)
+    
+    if not status or status.get("status") != "completed":
         raise HTTPException(status_code=404, detail="Generated ZIP not found")
     
     zip_path = GENERATED_CODE_DIR / f"{generation_id}.zip"
