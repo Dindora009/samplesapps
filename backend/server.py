@@ -350,22 +350,36 @@ async def generate_app(request: AppGenerationRequest, background_tasks: Backgrou
 async def get_generation_status(generation_id: str):
     status = None
     
-    # Try to get from MongoDB first if available
-    if db is not None:
-        try:
-            status = await db.generation_status.find_one({"id": generation_id})
-        except Exception as e:
-            logging.error(f"Failed to retrieve generation status from MongoDB: {str(e)}")
-    
-    # Fall back to in-memory storage
-    if status is None:
-        app.state.generation_statuses = getattr(app.state, 'generation_statuses', {})
-        status = app.state.generation_statuses.get(generation_id)
-    
-    if not status:
-        raise HTTPException(status_code=404, detail="Generation ID not found")
-    
-    return status
+    try:
+        # Try to get from MongoDB first if available
+        if db is not None:
+            try:
+                status = await db.generation_status.find_one({"id": generation_id})
+                logging.info(f"Retrieved status from MongoDB: {status is not None}")
+            except Exception as e:
+                logging.error(f"Failed to retrieve generation status from MongoDB: {str(e)}")
+        
+        # Fall back to in-memory storage
+        if status is None:
+            app.state.generation_statuses = getattr(app.state, 'generation_statuses', {})
+            status = app.state.generation_statuses.get(generation_id)
+            logging.info(f"Retrieved status from memory: {status is not None}")
+        
+        if not status:
+            raise HTTPException(status_code=404, detail="Generation ID not found")
+        
+        # Ensure status is a dictionary if it's a MongoDB document
+        if not isinstance(status, dict):
+            status = dict(status)
+        
+        return status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in get_generation_status: {str(e)}")
+        logging.error(f"Generation ID: {generation_id}")
+        logging.error(f"Status object: {status}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving generation status: {str(e)}")
 
 @api_router.get("/download/{generation_id}")
 async def download_zip(generation_id: str):
