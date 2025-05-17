@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Generator</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f5f5f5;
+    }
+    
+    #icon {
+      width: 128px;
+      height: 128px;
+      background-color: #5B21B6;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .tshirt {
+      position: absolute;
+      top: 20%;
+      left: 25%;
+      width: 50%;
+      height: 60%;
+      background-color: white;
+      clip-path: polygon(
+        50% 0%, 
+        90% 20%, 
+        100% 40%, 
+        80% 30%, 
+        80% 100%, 
+        20% 100%, 
+        20% 30%, 
+        0% 40%, 
+        10% 20%
+      );
+    }
+    
+    .person {
+      position: absolute;
+      top: 25%;
+      left: 36%;
+      width: 28%;
+      height: 55%;
+    }
+    
+    .head {
+      width: 50%;
+      height: 25%;
+      background-color: #F59E0B;
+      border-radius: 50%;
+      margin: 0 auto;
+    }
+    
+    .body {
+      width: 80%;
+      height: 60%;
+      background-color: #F59E0B;
+      margin: 0 auto;
+      border-radius: 0 0 50% 50%;
+    }
+  </style>
+</head>
+<body>
+  <div id="icon">
+    <div class="tshirt"></div>
+    <div class="person">
+      <div class="head"></div>
+      <div class="body"></div>
+    </div>
+  </div>
+  
+  <script>
+    // To create icons, take a screenshot of this page and save as PNG
+    // Then resize to 16x16, 48x48 and 128x128
+    console.log('Icon generator');
+  </script>
+</body>
+</html>
